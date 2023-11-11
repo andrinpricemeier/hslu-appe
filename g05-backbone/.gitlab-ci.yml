@@ -1,0 +1,18 @@
+##
+# ToolChain ABIZ Edu
+# roland.christen@hslu.ch
+#
+# (manual) deploy docker stack to appe docker swarm (docker deamon over TCP with TLS authentication)
+#
+##
+
+include:
+  - project: chr-share/devops/gitlab-cicd
+    ref: appe
+    file: auto-cicd.deploy-only.yml
+
+variables:
+  DEPLOY: qa
+  CUST_CMD: "docker network create traefik-public --scope=swarm --driver=overlay || true && docker network create bus-net --scope=swarm --driver=overlay || true"
+  STORAGES: "traefik portainer"
+  SERVICE_NAME: ${GROUP_ID}-backbone

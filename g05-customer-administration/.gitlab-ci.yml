@@ -1,0 +1,19 @@
+##
+# ToolChain APPE
+# roland.christen@hslu.ch
+#
+# * (auto) build and pack maven project as JAR
+# * (auto in parallel) 
+#     * build docker image and upload docker image to APPE docker hub
+#     * build maven site (qs and documentation)
+# * (manual) deploy docker orchestration to appe docker host (docker deamon over TCP with TLS authentication)
+##
+
+include:
+  - project: chr-share/devops/gitlab-cicd
+    ref: appe
+    file: auto-cicd.java.yml
+
+variables:
+  SERVICE_NAME: ${CI_PROJECT_NAME}
+  DEPLOY: qa

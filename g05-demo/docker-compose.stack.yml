@@ -1,0 +1,112 @@
+version: '3.5'
+
+volumes:
+  mongo-data:
+    driver_opts:
+      type: none
+      device: ${STORAGE_PATH}/mongo
+      o: bind
+
+networks:
+  backend:
+  frontend:
+    name: traefik-public
+    external: true
+  bus-net:
+    name: bus-net
+    external: true
+
+services:
+
+  register:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/register-service:stable
+    command:
+      - '-v'
+      - '-s'
+      - '60'
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHANGE=appe'
+      - 'DB_URL=mongodb://mongodb:27017'
+      - 'DB_USER=root'
+      - 'DB_PASSWORD=root'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - backend
+      - bus-net
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}Register.rule=Host(`register.demo.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}Register.loadbalancer.server.port=8090'
+  
+  statistics:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/statistics-service:stable
+    command:
+      - '-v'
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHANGE=appe'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - bus-net
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}Statistics.rule=Host(`stats.demo.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}Statistics.loadbalancer.server.port=8090'
+  
+  dashboard:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/dashboard-service:stable
+    command:
+      - '-v'
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHANGE=appe'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - bus-net
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}Dashboard.rule=Host(`dashboard.demo.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}Dashboard.loadbalancer.server.port=8090'
+
+  mongodb:
+    image: mongo:4.2.5
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'root'
+      MONGO_INITDB_ROOT_PASSWORD: 'root'
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - backend
+    deploy:
+      replicas: 1
+
+  dbms:
+    image: mongo-express
+    restart: always
+    ports:
+      - '8081:8081'
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: 'root'
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 'root'
+    networks:
+      - backend
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}Dbms.rule=Host(`db.demo.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}Dbms.loadbalancer.server.port=8081'

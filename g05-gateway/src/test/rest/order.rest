@@ -1,0 +1,18 @@
+//@host = http://app.g05-gateway.appe-g05.el.eee.intern
+@host = http://localhost:8090
+@endpoint = /api/v1/orders
+POST {{host}}{{endpoint}} HTTP/1.1
+content-type: application/json
+
+{
+    "id": "123",
+    "salespersonId": "1",
+    "customerId": "1",
+    "positions": [
+        {
+            "amount": 2,
+            "articleId": "12310823",
+            "price": 29.80
+        }
+    ]
+}

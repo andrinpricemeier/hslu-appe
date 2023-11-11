@@ -1,0 +1,51 @@
+#
+# ToolChain APPE
+#
+# roland.christen@hslu.ch
+#
+##
+
+version: '3.5'
+
+networks:
+  backbone:
+  demo:
+
+services:
+  
+  bus:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/rabbitmq:stable
+    restart: always
+    ports:
+      - "8082:15672"
+      - "5672:5672"
+    networks:
+      - backbone
+
+  portainer:
+    image: portainer/portainer-ce:2.0.1-alpine
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
+    ports:
+      - "8083:9000"
+    networks:
+      - backbone
+  
+  mongodb:
+    image: mongo:4.2.5
+    restart: always
+    ports:
+      - '27017:27017'
+    networks:
+      - backbone
+  
+  mongo-viewer:
+    image: mongo-express
+    restart: always
+    ports:
+      - "8084:8081"
+    networks:
+      - backbone
+    links:
+      - "mongodb:mongo"

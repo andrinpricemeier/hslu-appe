@@ -1,0 +1,55 @@
+# Stack configuration for Deployment on APPE Swarm.
+#
+# roland.christen@hslu.ch
+##
+
+version: '3.5'
+
+networks:
+  customer-backend:
+  frontend:
+    name: traefik-public
+    external: true
+  bus-net:
+    name: bus-net
+    external: true
+services:
+  app:
+    image: $IMAGE_ID
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHAGNE=appe'
+      - 'JAEGER_SERVICE_NAME=customer'
+      - 'JAEGER_ENDPOINT=http://jaeger:14268/api/traces'
+      - 'JAEGER_SAMPLER_TYPE=const'
+      - 'JAEGER_SAMPLER_PARAM=1'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - bus-net
+      - customer-backend
+    deploy:
+      replicas: 1
+  customer-mongodb:
+    image: mongo:4.2.5
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'root'
+      MONGO_INITDB_ROOT_PASSWORD: 'root'
+    networks:
+      - customer-backend
+  customer-mongo-viewer:
+    image: mongo-express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_SERVER: customer-mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: 'root'
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 'root'
+    networks:
+      - customer-backend
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}MongoViewer.rule=Host(`mongoviewer.${SERVICE_NAME}.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}MongoViewer.loadbalancer.server.port=8081'

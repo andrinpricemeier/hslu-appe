@@ -1,0 +1,10 @@
+.m2
+/target/
+/.settings/
+/.classpath
+/.project
+.idea
+g05-customer-administration.iml
+*.log
+src/main/resources/application.properties
+src/main/resources/rabbitmq.properties

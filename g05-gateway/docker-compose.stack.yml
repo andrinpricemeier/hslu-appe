@@ -1,0 +1,37 @@
+# Stack configuration for Deployment on APPE Swarm.
+#
+# roland.christen@hslu.ch
+##
+
+version: '3.5'
+
+networks:
+  frontend:
+    name: traefik-public
+    external: true
+  bus-net:
+    name: bus-net
+    external: true
+
+services:
+
+  gw:
+    image: $IMAGE_ID
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHAGNE=appe'
+      - 'JAEGER_SERVICE_NAME=gw'
+      - 'JAEGER_ENDPOINT=http://jaeger:14268/api/traces'
+      - 'JAEGER_SAMPLER_TYPE=const'
+      - 'JAEGER_SAMPLER_PARAM=1'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - bus-net
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}App.rule=Host(`app.${SERVICE_NAME}.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}App.loadbalancer.server.port=8090'

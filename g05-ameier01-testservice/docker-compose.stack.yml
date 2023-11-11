@@ -1,0 +1,45 @@
+# Stack configuration for Deployment on APPE Swarm.
+#
+# roland.christen@hslu.ch
+##
+
+version: '3.5'
+
+networks:
+  backend:
+    name: backend
+  frontend:
+    name: traefik-public
+    external: true
+  bus-net:
+    name: bus-net
+    external: true
+
+services:
+
+  mongodb:
+    image: mongo:4.2.5
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'root'
+      MONGO_INITDB_ROOT_PASSWORD: 'root'
+    networks:
+      - backend
+
+
+  app:
+    image: $IMAGE_ID
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHAGNE=appe'
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - /etc/timezone:/etc/timezone
+    networks:
+      - bus-net
+      - backend
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - 'traefik.http.routers.${SERVICE_NAME}App.rule=Host(`app.${SERVICE_NAME}.${TLD}`)'
+        - 'traefik.http.services.${SERVICE_NAME}App.loadbalancer.server.port=8080'

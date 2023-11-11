@@ -1,0 +1,114 @@
+version: '3.5'
+
+volumes:
+  traefik-data:
+    driver_opts:
+      type: none
+      device: ${STORAGE_PATH}/traefik
+      o: bind
+  portainer-data:
+    driver_opts:
+      type: none
+      device: ${STORAGE_PATH}/portainer
+      o: bind
+
+networks:
+  frontend:
+    name: traefik-public
+    external: true
+  bus-net:
+    name: bus-net
+    external: true
+
+services:
+
+  traefik:
+    image: traefik:v2.3.6
+    command:
+
+      # connect to docker socket in swarm mode
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.swarmMode=true"
+
+      # configure web routing
+      - "--providers.docker.exposedbydefault=true"
+      - "--providers.docker.network=traefik-public"
+      
+      # create public entry points for HTTP 
+      - "--entrypoints.intern.address=:80"
+
+      # dev config
+      - "--api=true"
+      - "--api.dashboard=true"   
+      - "--api.insecure=false"   # https://docs.traefik.io/v2.0/operations/dashboard/#secure-mode
+      - "--api.debug=true"       # additional endpoints for debugging and profiling
+      - "--log.level=DEBUG"      # https://docs.traefik.io/observability/logs/
+
+    ports:
+      - 80:80
+
+    volumes:
+
+      # connect to docker socket (in order to react to docker events)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # persistent data
+      - traefik-data:/storage
+
+    networks:
+      - frontend
+
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager  # must always be on a manager node
+      replicas: 1
+      labels:
+        # configure route for dashboard
+        - "traefik.http.routers.$SERVICE_NAME.rule=Host(`traefik.${TLD}`)"
+        - "traefik.http.routers.$SERVICE_NAME.service=api@internal"
+        - "traefik.http.services.$SERVICE_NAME.loadbalancer.server.port=8080"
+  bus:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/rabbitmq:stable
+    networks:
+      - bus-net
+      - frontend
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.http.routers.${SERVICE_NAME}Bus.rule=Host(`bus.${TLD}`)"
+        - "traefik.http.services.${SERVICE_NAME}Bus.loadbalancer.server.port=15672"
+
+  portainer:
+    image: portainer/portainer-ce:2.0.1-alpine
+    networks:
+      - frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer-data:/data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.http.routers.${SERVICE_NAME}Portainer.rule=Host(`portainer.${TLD}`)"
+        - "traefik.http.services.${SERVICE_NAME}Portainer.loadbalancer.server.port=9000"
+
+  visualizer:
+    image: gitlab.enterpriselab.ch:4567/chr-share/devops/swarm-visualizer:stable
+    command: 
+      - '-v'
+    networks:
+      - frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.http.routers.${SERVICE_NAME}Visualizer.rule=Host(`discover.${TLD}`)"
+        - "traefik.http.services.${SERVICE_NAME}Visualizer.loadbalancer.server.port=8090"

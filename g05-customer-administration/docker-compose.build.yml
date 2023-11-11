@@ -1,0 +1,16 @@
+# Container orchestration to build docker images from source code
+#
+# roland.christen@hslu.ch
+##
+
+version: '3.5'
+
+services:
+
+  app:
+    image: $IMAGE_ID
+    build:
+      context: .
+      args:
+        GIT_VERSION: $GIT_VERSION
+        GIT_DATE: $GIT_DATE

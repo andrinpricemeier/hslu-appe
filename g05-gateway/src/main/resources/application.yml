@@ -1,0 +1,21 @@
+micronaut:
+    application:
+        name: gateway-sample
+    server:
+        port: 8090
+        cors:
+          enabled: true
+          configurations:
+            web:
+              allowedOrigins:
+                - http://app.g05-gui.appe-g05.el.eee.intern
+                - http://localhost:3000
+    security:
+        authentication: bearer
+        token:
+          jwt:
+            enabled: true
+            signatures:
+              jwks:
+                keycloak:
+                  url: 'http://keycloak.g05-user.appe-g05.el.eee.intern/auth/realms/FBS/protocol/openid-connect/certs'

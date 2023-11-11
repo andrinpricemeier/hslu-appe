@@ -1,0 +1,86 @@
+#
+# ToolChain APPE
+#
+# Orchestration of messaging infrastructure, monitoring and example services.
+#
+# roland.christen@hslu.ch
+#
+##
+
+version: '3.5'
+
+networks:
+  demo-backend:
+  busnet:
+    # TODO: replace this with the name of your network
+    name: backbone-stack_backend
+    external: true
+
+services:
+
+  register:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/register-service:stable
+    command:
+      - '-v'
+      - '-s'
+      - '60'
+    restart: always
+    environment:
+      - 'BUS_URL=amqp://appe:appe@bus:5672/'
+      - 'BUS_EXCHANGE=appe'
+      - 'DB_URL=mongodb://mongodb:27017'
+      - 'DB_USER=root'
+      - 'DB_PASSWORD=root'
+    networks:
+      - busnet
+      - demo-backend
+    ports:
+      - '8091:8090'
+  
+  statistics:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/statistics-service:stable
+    command:
+      - '-v'
+    restart: always
+    environment:
+      - 'BUS_URL=amqp://appe:appe@0.0.0.0:5672/'
+      - 'BUS_EXCHANGE=appe'
+    networks:
+      - busnet
+      - demo-backend
+    ports:
+      - '8092:8090'
+  
+  dashboard:
+    image: gitlab.enterpriselab.ch:4567/chr-share/edu/appe/dashboard-service:stable
+    command:
+      - '-v'
+    restart: always
+    environment:
+      - 'BUS_URL=amqp://appe:appe@0.0.0.0:5672/'
+      - 'BUS_EXCHANGE=appe'
+    networks:
+      - busnet
+    ports:
+      - '8093:8090'
+
+  mongodb:
+    image: mongo:4.2.5
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: 'root'
+      MONGO_INITDB_ROOT_PASSWORD: 'root'
+    networks:
+      - demo-backend
+
+  dbms:
+    image: mongo-express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: 'root'
+      ME_CONFIG_MONGODB_ADMINPASSWORD: 'root'
+    networks:
+      - demo-backend
+    ports:
+      - '8094:8081'

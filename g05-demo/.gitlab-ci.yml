@@ -1,0 +1,15 @@
+##
+# ToolChain APPE
+# roland.christen@hslu.ch
+#
+##
+
+include:
+  - project: chr-share/devops/gitlab-cicd
+    ref: appe
+    file: auto-cicd.deploy-only.yml
+
+variables:
+  DEPLOY: qa
+  STORAGES: "mongo"
+  SERVICE_NAME: ${GROUP_ID}-demo
